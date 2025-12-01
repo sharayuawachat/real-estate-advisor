@@ -39,9 +39,17 @@ if uploaded_file:
     st.write(df.describe())
 
     # SECTION 2: Price Distribution
-    st.subheader("💰 Price Distribution")
-    fig1 = px.histogram(df, x="Price_in_Lakhs", nbins=40, title="Distribution of Property Prices")
-    st.plotly_chart(fig1, use_container_width=True)
+    # Clean Price Distribution Chart
+    df["Price_Bins"] = pd.cut(df["Price_in_Lakhs"], bins=12)
+    bin_counts = df["Price_Bins"].value_counts().sort_index()
+    fig = px.bar(
+    x=bin_counts.index.astype(str),
+    y=bin_counts.values,
+    labels={'x': 'Price Range (Lakhs)', 'y': 'Number of Properties'},
+    title="Price Distribution (Binned Ranges)"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
 
     # SECTION 3: Investment Classification
     st.subheader("🏆 Investment Classification Breakdown")
