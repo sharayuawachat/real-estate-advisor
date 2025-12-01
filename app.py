@@ -1,68 +1,85 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-
 from preprocessing import (
     load_data, basic_cleaning, impute_missing,
-    engineer_features, create_investment_label,
-    predict_future_price
+    engineer_features, create_investment_label, predict_future_price
 )
 
-st.set_page_config(page_title="Real Estate Advisor", layout="wide")
+st.set_page_config(page_title="Real Estate Investment Advisor", layout="wide")
 
+st.title("🏠 Real Estate Investment Advisor")
+st.write("Upload your dataset to analyze property insights!")
 
-st.title("🏡 Real Estate Investment Advisor")
-st.write("Upload your dataset to analyze and get investment insights.")
+uploaded_file = st.file_uploader("Upload CSV file", type=["csv"])
 
-uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
-
-if uploaded_file:
-
-    # Load data
+if uploaded_file is not None:
+    # Load and process
     df = load_data(uploaded_file)
-
-    st.success("Dataset Loaded Successfully!")
-    st.write("### First 5 Rows")
-    st.dataframe(df.head())
-
-    # Preprocess
     df = basic_cleaning(df)
     df = impute_missing(df)
     df = engineer_features(df)
     df = create_investment_label(df)
     df = predict_future_price(df)
 
-    st.write("### ✔ Data Successfully Processed")
+    # Tabs
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "📄 Dataset Preview",
+        "📊 EDA",
+        "⭐ Investment Score",
+        "📈 Future Price Prediction"
+    ])
 
-    # SECTION 1: Summary
-    st.subheader("📊 Dataset Summary")
-    st.write(df.describe())
+    # --------------------------
+    # TAB 1 — Dataset Preview
+    # --------------------------
+    with tab1:
+        st.subheader("Cleaned Dataset")
+        st.dataframe(df.head(100))
 
-    # SECTION 2: Price Distribution
-    st.subheader("💰 Price Distribution")
-    fig1 = px.histogram(df, x="Price_in_Lakhs", nbins=40, title="Distribution of Property Prices")
-    st.plotly_chart(fig1, use_container_width=True)
+        st.download_button(
+            "Download Cleaned Dataset",
+            df.to_csv(index=False),
+            "Cleaned_Real_Estate.csv",
+            "text/csv"
+        )
 
-    # SECTION 3: Investment Classification
-    st.subheader("🏆 Investment Classification Breakdown")
-    inv_counts = df["Predicted_Good_Investment"].value_counts().rename({0:"Not Good",1:"Good"})
-    fig2 = px.pie(values=inv_counts.values, names=inv_counts.index, title="Good vs Not Good Investments")
-    st.plotly_chart(fig2, use_container_width=True)
+    # --------------------------
+    # TAB 2 — EDA
+    # --------------------------
+    with tab2:
+        st.subheader("Price Distribution")
+        fig1 = px.histogram(df, x="Price_in_Lakhs", nbins=50, title="Distribution of Prices")
+        st.plotly_chart(fig1, use_container_width=True)
 
-    # SECTION 4: Future Price Forecast
-    st.subheader("📈 Future Price Forecast (5 Years)")
-    fig3 = px.scatter(df, x="Price_in_Lakhs", y="Future_Price_in_Lakhs",
-                      title="Current vs Future Price")
-    st.plotly_chart(fig3, use_container_width=True)
+        st.subheader("Price per SqFt by Property Type")
+        fig2 = px.box(df, x="Property_Type", y="Price_per_SqFt", title="PPSF by Property Type")
+        st.plotly_chart(fig2, use_container_width=True)
 
-    # SECTION 5: Download Cleaned File
-    st.subheader("⬇ Download Processed Dataset")
-    st.download_button(
-        label="Download Cleaned CSV",
-        data=df.to_csv(index=False),
-        file_name="cleaned_real_estate_data.csv",
-        mime="text/csv"
-    )
+        st.subheader("Size vs Price Trend")
+        fig3 = px.scatter(df, x="Size_in_SqFt", y="Price_in_Lakhs", opacity=0.2, trendline="ols")
+        st.plotly_chart(fig3, use_container_width=True)
+
+    # --------------------------
+    # TAB 3 — Investment Score
+    # --------------------------
+    with tab3:
+        st.subheader("Investment Recommendation")
+        fig4 = px.pie(df, names="Predicted_Good_Investment",
+                      title="Good Investment vs Not")
+        st.plotly_chart(fig4, use_container_width=True)
+
+        st.write("1 = Good Investment, 0 = Not Recommended")
+
+    # --------------------------
+    # TAB 4 — Future Price Prediction
+    # --------------------------
+    with tab4:
+        st.subheader("Future Price after 5 Years (8% Annual Growth)")
+        fig5 = px.scatter(df, x="Price_in_Lakhs", y="Future_Price_in_Lakhs", opacity=0.3)
+        st.plotly_chart(fig5, use_container_width=True)
+
+        st.write(df[["Price_in_Lakhs", "Future_Price_in_Lakhs"]].head())
 
 else:
-    st.info("Please upload a CSV file to continue.")
+    st.info("Please upload a CSV file to begin.")
